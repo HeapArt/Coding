@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script>
+
+        // Global variable
+        var gGlobal = {
+            ViewPointID: "id_ViewPoint1",
+            FireworkCount: 10,
+            FireworkArray: [],
+            FireworkBaseVelocityX: 100,
+            FireworkBaseVelocityY: 150,
+
+            SparkCount: 100,
+            SparkBaseVelocity: 100,
+
+
+            BoomTime: 2.0,
+            SparkDieTime: 4.0,
+
+            LastIterationTime: 0
+        };
+
+        // Program Functions
+
+        function Fireworks(iX, iY, iRadius, iDx, iDy) {
+            return {
+                x: iX,
+                y: iY,
+                radius: iRadius,
+                dx: iDx,
+                dy: iDy,
+                Sparks: [],
+                State: 0,
+                Timer: 0
+            };
+        }
+
+
+        function Sparks(iX, iY, iRadius, iDx, iDy) {
+            return {
+                x: iX,
+                y: iY,
+                radius: iRadius,
+                dx: iDx,
+                dy: iDy
+            };
+        }
+
+        function gameloop() {
+
+            // Time Calculation
+            var wDate = new Date();
+            var wDt = wDate.getTime() - gGlobal.LastIterationTime;
+            wDt /= 1000;
+            gGlobal.LastIterationTime = wDate.getTime();
+
+
+            var wCanvas = document.getElementById(gGlobal.ViewPointID);
+            if (null == wCanvas) {
+                return;
+            }
+
+            var wCtx = wCanvas.getContext("2d");
+
+            if (null == wCtx) {
+                return;
+            }
+
+            // Simulation Phase
+            var wFriction = 0.5;
+            for (var wi = 0; wi < gGlobal.FireworkArray.length; ++wi) {
+                var wFirework = gGlobal.FireworkArray[wi];
+
+                var fax = - wFriction * wFirework.dx;
+                var fay = 9.81 - wFriction * wFirework.dy;
+                wFirework.dx += fax * wDt;
+                wFirework.dy += fay * wDt;
+                wFirework.x += wFirework.dx * wDt;
+                wFirework.y += wFirework.dy * wDt;
+
+                for (var wj = 0; wj < wFirework.Sparks.length; ++wj) {
+                    var wSpark = wFirework.Sparks[wj];
+
+                    var ax = - wFriction * wSpark.dx;
+                    var ay = 9.81 - wFriction * wSpark.dy;
+                    wSpark.dx += ax * wDt;
+                    wSpark.dy += ay * wDt;
+                    wSpark.x += wSpark.dx * wDt;
+                    wSpark.y += wSpark.dy * wDt;
+                }
+
+
+                if (wFirework.dy > 0) {
+                    wFirework.Timer += wDt;
+                }
+
+                if (wFirework.Timer > gGlobal.BoomTime) {
+
+                    if (wFirework.State == 0) {
+                        wFirework.State = 1;
+
+                        for (var wj = 0; wj < wFirework.Sparks.length; ++wj) {
+                            var wSpark = wFirework.Sparks[wj];
+
+                            wSpark.x = wFirework.x;
+                            wSpark.y = wFirework.y;
+
+                            var wAngle = Math.random() * 2 * Math.PI;
+                            var wMag = Math.random() * gGlobal.SparkBaseVelocity;
+                            wSpark.dx = wMag * Math.cos(wAngle);
+                            wSpark.dy = wMag * Math.sin(wAngle);
+                        }
+                    }
+                }
+
+                if (wFirework.Timer > gGlobal.BoomTime + gGlobal.SparkDieTime) {
+                    wFirework.State = 2;
+                }
+
+                if ((wFirework.x < 0) || (wFirework.x > wCanvas.width)
+                    /*|| (wFirework.y < 0) */ || (wFirework.y > wCanvas.height)) {
+                    wFirework.State = 2;
+
+                }
+
+                if (wFirework.State == 2) {
+
+                    wFirework.x = wCanvas.width * 0.5;
+                    wFirework.y = wCanvas.height;
+
+                    //Replace with Kinematic equation to better fill page
+                    //wFirework.dy = -1.0 * Math.random() * gGlobal.FireworkBaseVelocityY;
+                    //wFirework.dx = 2.0 * (Math.random() - 0.5) * gGlobal.FireworkBaseVelocityX;
+
+                    wFirework.dy = -1.0 * Math.sqrt(2 * 9.81 * (Math.random() * wCanvas.height));
+                    wFirework.dy *= 3;
+                    wFirework.dy += 10;
+                    wFirework.dx = 2.0 * (Math.random() - 0.5) * (0.5 * wCanvas.width) / 3;
+
+                    wFirework.State = 0;
+                    wFirework.Timer = 0;
+
+                    for (var wj = 0; wj < wFirework.Sparks.length; ++wj) {
+                        var wSpark = wFirework.Sparks[wj];
+
+                        wSpark.x = wFirework.x;
+                        wSpark.y = wFirework.y;
+                        wSpark.dx = wFirework.dx;
+                        wSpark.dy = wFirework.dy;
+                    }
+                }
+
+            }
+
+            // Animation Phase
+
+
+            //            wCtx.clearRect(0, 0, wCanvas.width, wCanvas.height);
+            wCtx.fillStyle = "rgba(0,0,0,0.1)";
+            wCtx.fillRect(0, 0, wCanvas.width, wCanvas.height);
+
+            wCtx.lineWidth = 1;
+
+            for (var wi = 0; wi < gGlobal.FireworkArray.length; ++wi) {
+                var wFirework = gGlobal.FireworkArray[wi];
+
+                if (wFirework.State == 0) {
+                    wCtx.strokeStyle = "blue";
+                    wCtx.fillStyle = "blue";
+
+                    wCtx.beginPath();
+                    wCtx.arc(wFirework.x, wFirework.y, wFirework.radius, 0, 2 * Math.PI, false);
+                    wCtx.fill();
+                    wCtx.stroke();
+
+                }
+                else {
+                    for (var wj = 0; wj < wFirework.Sparks.length; ++wj) {
+                        var wSpark = wFirework.Sparks[wj];
+
+                        wCtx.strokeStyle = "cyan";
+                        wCtx.fillStyle = "cyan";
+
+                        wCtx.beginPath();
+                        wCtx.arc(wSpark.x, wSpark.y, wSpark.radius, 0, 2 * Math.PI, false);
+                        wCtx.fill();
+                        wCtx.stroke();
+
+                    }
+
+                }
+
+            }
+
+            requestAnimationFrame(gameloop);
+
+        }
+
+        function initialization() {
+
+            resize();
+            window.addEventListener("resize", resize);
+
+            var wCanvas = document.getElementById(gGlobal.ViewPointID);
+            if (null != wCanvas) {
+                for (var wi = 0; wi < gGlobal.FireworkCount; ++wi) {
+
+                    var wX = Math.random() * wCanvas.width;
+                    var wY = Math.random() * wCanvas.height;
+                    var wRadius = Math.random() * (5 - 3) + 3;
+
+                    var wDx = 2.0 * (Math.random() - 0.5) * gGlobal.FireworkBaseVelocityX;
+                    var wDy = 2.0 * (Math.random() - 0.5) * gGlobal.FireworkBaseVelocityY;
+
+                    var wNewFirework = new Fireworks(wX, wY, wRadius, wDx, wDy);
+
+                    for (var wj = 0; wj < gGlobal.SparkCount; ++wj) {
+
+                        var wSpark = new Sparks(wX, wY, 3, wDx, wDy);
+                        wNewFirework.Sparks.push(wSpark);
+                    }
+
+                    gGlobal.FireworkArray.push(wNewFirework);
+
+                }
+
+            }
+
+            var wDate = new Date();
+            gGlobal.LastIterationTime = wDate.getTime();
+            gameloop();
+        }
+
+        function resize() {
+            var wCanvas = document.getElementById(gGlobal.ViewPointID);
+            if (null != wCanvas) {
+                wCanvas.width = wCanvas.parentNode.offsetWidth;
+                wCanvas.height = wCanvas.parentNode.offsetHeight;
+            }
+        }
+
+        window.addEventListener("load", initialization);
+
+    </script>
+    <style>
+        body {
+            width: 100%;
+            height: 100vh;
+            margin: 0px;
+            padding: 0px;
+            overflow: hidden;
+        }
+
+        canvas {
+            background-color: black;
+        }
+
+        div {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <canvas id="id_ViewPoint1"></canvas>
+    </div>
+</body>
+
+</html>
