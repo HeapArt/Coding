@@ -155,9 +155,8 @@
             }
 
             // Animation Phase
-
-
-            //            wCtx.clearRect(0, 0, wCanvas.width, wCanvas.height);
+            //wCtx.clearRect(0, 0, wCanvas.width, wCanvas.height);
+            
             wCtx.fillStyle = "rgba(0,0,0,0.1)";
             wCtx.fillRect(0, 0, wCanvas.width, wCanvas.height);
 
@@ -181,7 +180,7 @@
                         var wSpark = wFirework.Sparks[wj];
 
                         wCtx.strokeStyle = "cyan";
-                        wCtx.fillStyle = "cyan";
+                        wCtx.fillStyle = "cyan"; //"hsl(" + Math.random()*360 + " , 100%, 50%)";
 
                         wCtx.beginPath();
                         wCtx.arc(wSpark.x, wSpark.y, wSpark.radius, 0, 2 * Math.PI, false);
