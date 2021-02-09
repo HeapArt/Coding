@@ -33,7 +33,8 @@
                 dy: iDy,
                 Sparks: [],
                 State: 0,
-                Timer: 0
+                Timer: 0,
+                color : "hsl(" + Math.random()*360 + " , 100%, 70%)"
             };
         }
 
@@ -141,6 +142,7 @@
 
                     wFirework.State = 0;
                     wFirework.Timer = 0;
+                    wFirework.color = "hsla(" + Math.random()*360 + " , 100%, 70%, 0.5)"
 
                     for (var wj = 0; wj < wFirework.Sparks.length; ++wj) {
                         var wSpark = wFirework.Sparks[wj];
@@ -179,8 +181,8 @@
                     for (var wj = 0; wj < wFirework.Sparks.length; ++wj) {
                         var wSpark = wFirework.Sparks[wj];
 
-                        wCtx.strokeStyle = "cyan";
-                        wCtx.fillStyle = "cyan"; //"hsl(" + Math.random()*360 + " , 100%, 50%)";
+                        wCtx.strokeStyle = wFirework.color;
+                        wCtx.fillStyle = wFirework.color;
 
                         wCtx.beginPath();
                         wCtx.arc(wSpark.x, wSpark.y, wSpark.radius, 0, 2 * Math.PI, false);
