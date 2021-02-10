@@ -18,7 +18,13 @@
       mouseHandler: {
         x: -1,
         y: -1
-      }
+      },
+
+      offsetArrayX: null,
+      offsetArrayY: null,
+      velocityArrayX: null,
+      velocityArrayY: null,
+      lastIterationTime : 0
     };
 
     function transferFunction(iX, iY) {
@@ -27,13 +33,10 @@
       var wDy = iY - gGlobal.mouseHandler.y;
       var wRadSq = wDx * wDx + wDy * wDy;
 
-      if (wRadSq < 1000) {
-        return {
-          x: iX + 2*wDx,
-          y: iY + 2*wDy
-        };
-
-      }
+      return {
+        x: iX + Math.round(10 / wDx),
+        y: iY + Math.round(10 / wDy)
+      };
 
       return {
         x: iX,
@@ -71,10 +74,18 @@
         })
       }
 
+      gGlobal.lastIterationTime = (new Date).getTime();
       gameLoop();
     }
 
     function gameLoop() {
+
+      var wTime = (new Date).getTime();
+      var wDt = wTime - gGlobal.lastIterationTime;
+      wDt /= 1000;
+
+      gGlobal.lastIterationTime = wTime;
+
 
       var wViewPointCanvas = document.getElementById(gGlobal.ViewCanvasId);
       if (null == wViewPointCanvas) {
@@ -110,44 +121,86 @@
         var wViewImgData = wViewImgCtx.getImageData(0, 0, wCanvasWidth, wCanvasHeight);
         var wViewImgPixelArray = wViewImgData.data;
 
-        for (var wX = 0; wX < wCanvasWidth; ++wX) {
-          for (var wY = 0; wY < wCanvasHeight; ++wY) {
-            var wIndex = (wY * wCanvasWidth + wX) * 4;
+        var wK = 1000;
+        var wC = 750;
+        var wQ = 10000000;
+        var wRadLimit = 1000;
+        var wRadLimitSq = wRadLimit * wRadLimit;
 
-            var wNewPosition = transferFunction(wX, wY);
+        for (var wi = 0; wi < gGlobal.offsetArrayX.length; ++wi) {
+          var wX = wi % wCanvasWidth;
+          var wY = Math.floor(wi / wCanvasWidth);
+          var wDx = wX + gGlobal.offsetArrayX[wi] - gGlobal.mouseHandler.x;
+          var wDy = wY + gGlobal.offsetArrayY[wi] - gGlobal.mouseHandler.y;
 
-            if ((wNewPosition.x == wX) && (wNewPosition.y == wY)) {
+          var wFx = - wK * gGlobal.offsetArrayX[wi] - wC * gGlobal.velocityArrayX[wi];
+          var wFy = - wK * gGlobal.offsetArrayY[wi] - wC * gGlobal.velocityArrayY[wi];
 
-              wViewImgPixelArray[wIndex] = wHiddenImgPixelArray[wIndex];
-              wViewImgPixelArray[wIndex + 1] = wHiddenImgPixelArray[wIndex + 1];
-              wViewImgPixelArray[wIndex + 2] = wHiddenImgPixelArray[wIndex + 2];
-              wViewImgPixelArray[wIndex + 3] = wHiddenImgPixelArray[wIndex + 3];
-            }
+          var wRadSq = wDx * wDx + wDy * wDy;
+          if (wRadSq < wRadLimitSq) {
+
+            var wFMag = wQ / (wRadSq);
+            var wRad = Math.sqrt(wRadSq);
+            wFx += wFMag * wDx / wRad;
+            wFy += wFMag * wDy / wRad;
+          }
+          
+          var wMappedIndex = wi * 4;
+          var wMass = 0;
+          wMass += wHiddenImgPixelArray[wMappedIndex];
+          wMass += wHiddenImgPixelArray[wMappedIndex + 1];
+          wMass += wHiddenImgPixelArray[wMappedIndex + 2];
+          wMass /=3;
+          wMass += 100;
+
+          gGlobal.velocityArrayX[wi] += wDt * wFx / wMass;
+          gGlobal.velocityArrayY[wi] += wDt * wFy / wMass;
+
+          gGlobal.offsetArrayX[wi] += wDt * gGlobal.velocityArrayX[wi];
+          gGlobal.offsetArrayY[wi] += wDt * gGlobal.velocityArrayY[wi];
+        }
+
+        for (var wi = 0; wi < gGlobal.offsetArrayX.length; ++wi) {
+
+          if ((0 == Math.round(gGlobal.offsetArrayX[wi])) && (0 == Math.round(gGlobal.offsetArrayY[wi]))) {
+            var wMappedIndex = wi * 4;
+            wViewImgPixelArray[wMappedIndex] = wHiddenImgPixelArray[wMappedIndex];
+            wViewImgPixelArray[wMappedIndex + 1] = wHiddenImgPixelArray[wMappedIndex + 1];
+            wViewImgPixelArray[wMappedIndex + 2] = wHiddenImgPixelArray[wMappedIndex + 2];
+            wViewImgPixelArray[wMappedIndex + 3] = wHiddenImgPixelArray[wMappedIndex + 3];
+
           }
         }
 
+        for (var wi = 0; wi < gGlobal.offsetArrayX.length; ++wi) {
 
-        for (var wX = 0; wX < wCanvasWidth; ++wX) {
-          for (var wY = 0; wY < wCanvasHeight; ++wY) {
-            var wIndex = (wY * wCanvasWidth + wX) * 4;
+          var wDx = Math.round(gGlobal.offsetArrayX[wi]);
+          var wDy = Math.round(gGlobal.offsetArrayY[wi]);
 
-            var wNewPosition = transferFunction(wX, wY);
+          if ((0 != wDx) || (0 != wDy)) {
 
-            if ((wNewPosition.x != wX) || (wNewPosition.y != wY)) {
-              if ((wNewPosition.x > 0) && (wNewPosition.x < wCanvasWidth)) {
-                if ((wNewPosition.y > 0) && (wNewPosition.y < wCanvasHeight)) {
-                  var wNewIndex = (wNewPosition.y * wCanvasWidth + wNewPosition.x) * 4;
+            var wX = wi % wCanvasWidth;
+            wX += wDx;
 
-                  wViewImgPixelArray[wNewIndex] = wHiddenImgPixelArray[wIndex];
-                  wViewImgPixelArray[wNewIndex + 1] = wHiddenImgPixelArray[wIndex + 1];
-                  wViewImgPixelArray[wNewIndex + 2] = wHiddenImgPixelArray[wIndex + 2];
-                  wViewImgPixelArray[wNewIndex + 3] = wHiddenImgPixelArray[wIndex + 3];
-                }
+            var wY = Math.floor(wi / wCanvasWidth);
+            wY += wDy;
+
+            if ((wX >= 0) && (wX < wCanvasWidth)) {
+              if ((wY >= 0) && (wY < wCanvasHeight)) {
+                var wNewIndex = wY * wCanvasWidth + wX;
+                wNewIndex *= 4;
+                wOldIndex = wi * 4;
+
+                wViewImgPixelArray[wNewIndex] = wHiddenImgPixelArray[wOldIndex];
+                wViewImgPixelArray[wNewIndex + 1] = wHiddenImgPixelArray[wOldIndex + 1];
+                wViewImgPixelArray[wNewIndex + 2] = wHiddenImgPixelArray[wOldIndex + 2];
+                wViewImgPixelArray[wNewIndex + 3] = wHiddenImgPixelArray[wOldIndex + 3];
+
               }
             }
           }
-        }
 
+        }
 
         wViewImgCtx.putImageData(wViewImgData, 0, 0);
 
@@ -169,6 +222,20 @@
 
         gGlobal.HiddenCanvas.width = wWidth;
         gGlobal.HiddenCanvas.height = wHeight;
+
+        var wArraySize = wWidth * wHeight;
+        gGlobal.offsetArrayX = new Float32Array(wArraySize);
+        gGlobal.offsetArrayY = new Float32Array(wArraySize);
+        gGlobal.velocityArrayX = new Float32Array(wArraySize);
+        gGlobal.velocityArrayY = new Float32Array(wArraySize);
+
+        for (var wi = 0; wi < wArraySize; ++wi) {
+          gGlobal.offsetArrayX[wi] = 0;
+          gGlobal.offsetArrayY[wi] = 0;
+          gGlobal.velocityArrayX[wi] = 0;
+          gGlobal.velocityArrayY[wi] = 0;
+
+        }
       }
 
     }
