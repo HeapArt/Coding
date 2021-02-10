@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Transfer Function Image</title>
+
+  <script>
+  </script>
+  <script>
+    var gGlobal = {
+      ImageFileInputId: "id_Input_ImgFile",
+      ImageFileLoadButtonId: "id_Input_ImgFile_load_btn",
+      ViewCanvasId: "id_ViewPoint",
+      HiddenCanvas: document.createElement("canvas"),
+      ReferenceImage: document.createElement("img"),
+      ReferenceImageAvailable: false,
+      mouseHandler: {
+        x: -1,
+        y: -1
+      }
+    };
+
+    function transferFunction(iX, iY) {
+
+      var wDx = iX - gGlobal.mouseHandler.x;
+      var wDy = iY - gGlobal.mouseHandler.y;
+      var wRadSq = wDx * wDx + wDy * wDy;
+
+      if (wRadSq < 1000) {
+        return {
+          x: iX + 2*wDx,
+          y: iY + 2*wDy
+        };
+
+      }
+
+      return {
+        x: iX,
+        y: iY
+      };
+
+    }
+
+    function init() {
+      resize();
+      window.addEventListener("resize", resize);
+
+      var wLoadButton = document.getElementById(gGlobal.ImageFileLoadButtonId);
+      if (null != wLoadButton) {
+        wLoadButton.addEventListener("click", function () {
+          var wInputFile = document.getElementById(gGlobal.ImageFileInputId);
+          if (null != wInputFile) {
+            if (wInputFile.files && wInputFile.files[0]) {
+              gGlobal.ReferenceImage.src = URL.createObjectURL(wInputFile.files[0]);
+            }
+          }
+        })
+      }
+
+      gGlobal.ReferenceImage.onload = function () {
+        gGlobal.ReferenceImageAvailable = true;
+      }
+
+      var wViewPointCanvas = document.getElementById(gGlobal.ViewCanvasId);
+      if (null != wViewPointCanvas) {
+        wViewPointCanvas.addEventListener("mousemove", function (iEvent) {
+          gGlobal.mouseHandler.x = iEvent.x;
+          gGlobal.mouseHandler.y = iEvent.y;
+
+        })
+      }
+
+      gameLoop();
+    }
+
+    function gameLoop() {
+
+      var wViewPointCanvas = document.getElementById(gGlobal.ViewCanvasId);
+      if (null == wViewPointCanvas) {
+        return;
+      }
+
+      var wCanvasWidth = wViewPointCanvas.width;
+      var wCanvasHeight = wViewPointCanvas.height;
+
+      if (true == gGlobal.ReferenceImageAvailable) {
+
+        var wScaleW = gGlobal.ReferenceImage.width / wCanvasWidth;
+        var wScaleH = gGlobal.ReferenceImage.height / wCanvasHeight;
+
+        var wScale = wScaleW > wScaleH ? wScaleW : wScaleH;
+        wScale = 1 / wScale;
+
+
+        var wXOffset = (wCanvasWidth - wScale * gGlobal.ReferenceImage.width) / 2.0;
+        var wYOffset = (wCanvasHeight - wScale * gGlobal.ReferenceImage.height) / 2.0;
+
+        var wHiddenImgCtx = gGlobal.HiddenCanvas.getContext("2d");
+        wHiddenImgCtx.clearRect(0, 0, wCanvasWidth, wCanvasHeight);
+        wHiddenImgCtx.drawImage(gGlobal.ReferenceImage, wXOffset, wYOffset, wScale * gGlobal.ReferenceImage.width, wScale * gGlobal.ReferenceImage.height);
+
+        var wHiddenImgData = wHiddenImgCtx.getImageData(0, 0, wCanvasWidth, wCanvasHeight);
+        var wHiddenImgPixelArray = wHiddenImgData.data;
+
+
+        var wViewImgCtx = wViewPointCanvas.getContext("2d");
+        wViewImgCtx.clearRect(0, 0, wCanvasWidth, wCanvasHeight);
+
+        var wViewImgData = wViewImgCtx.getImageData(0, 0, wCanvasWidth, wCanvasHeight);
+        var wViewImgPixelArray = wViewImgData.data;
+
+        for (var wX = 0; wX < wCanvasWidth; ++wX) {
+          for (var wY = 0; wY < wCanvasHeight; ++wY) {
+            var wIndex = (wY * wCanvasWidth + wX) * 4;
+
+            var wNewPosition = transferFunction(wX, wY);
+
+            if ((wNewPosition.x == wX) && (wNewPosition.y == wY)) {
+
+              wViewImgPixelArray[wIndex] = wHiddenImgPixelArray[wIndex];
+              wViewImgPixelArray[wIndex + 1] = wHiddenImgPixelArray[wIndex + 1];
+              wViewImgPixelArray[wIndex + 2] = wHiddenImgPixelArray[wIndex + 2];
+              wViewImgPixelArray[wIndex + 3] = wHiddenImgPixelArray[wIndex + 3];
+            }
+          }
+        }
+
+
+        for (var wX = 0; wX < wCanvasWidth; ++wX) {
+          for (var wY = 0; wY < wCanvasHeight; ++wY) {
+            var wIndex = (wY * wCanvasWidth + wX) * 4;
+
+            var wNewPosition = transferFunction(wX, wY);
+
+            if ((wNewPosition.x != wX) || (wNewPosition.y != wY)) {
+              if ((wNewPosition.x > 0) && (wNewPosition.x < wCanvasWidth)) {
+                if ((wNewPosition.y > 0) && (wNewPosition.y < wCanvasHeight)) {
+                  var wNewIndex = (wNewPosition.y * wCanvasWidth + wNewPosition.x) * 4;
+
+                  wViewImgPixelArray[wNewIndex] = wHiddenImgPixelArray[wIndex];
+                  wViewImgPixelArray[wNewIndex + 1] = wHiddenImgPixelArray[wIndex + 1];
+                  wViewImgPixelArray[wNewIndex + 2] = wHiddenImgPixelArray[wIndex + 2];
+                  wViewImgPixelArray[wNewIndex + 3] = wHiddenImgPixelArray[wIndex + 3];
+                }
+              }
+            }
+          }
+        }
+
+
+        wViewImgCtx.putImageData(wViewImgData, 0, 0);
+
+      }
+
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function resize() {
+      var wViewCanvas = document.getElementById(gGlobal.ViewCanvasId);
+      if (null != wViewCanvas) {
+
+        var wWidth = wViewCanvas.parentNode.offsetWidth;
+        var wHeight = wViewCanvas.parentNode.offsetHeight;
+
+        wViewCanvas.width = wWidth;
+        wViewCanvas.height = wHeight;
+
+        gGlobal.HiddenCanvas.width = wWidth;
+        gGlobal.HiddenCanvas.height = wHeight;
+      }
+
+    }
+
+    window.addEventListener("load", init);
+  </script>
+  <style>
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      margin: 0px;
+      padding: 0px;
+      background-color: black;
+    }
+
+    #id_ViewPoint_div {
+      width: 100%;
+      height: 100%;
+    }
+
+    #id_Input_Img_div {
+      position: fixed;
+      bottom: 0px;
+      background-color: white;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="id_Input_Img_div">
+    <input type="file" id="id_Input_ImgFile"></input>
+    <button id="id_Input_ImgFile_load_btn">Load</button>
+  </div>
+  <div id="id_ViewPoint_div">
+    <canvas id="id_ViewPoint"></canvas>
+  </div>
+</body>
+
+</html>
