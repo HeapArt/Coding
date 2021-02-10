@@ -17,7 +17,9 @@
       ReferenceImageAvailable: false,
       mouseHandler: {
         x: -1,
-        y: -1
+        y: -1,
+        xInput : - 1,
+        yInput : - 1,
       },
 
       offsetArrayX: null,
@@ -68,8 +70,8 @@
       var wViewPointCanvas = document.getElementById(gGlobal.ViewCanvasId);
       if (null != wViewPointCanvas) {
         wViewPointCanvas.addEventListener("mousemove", function (iEvent) {
-          gGlobal.mouseHandler.x = iEvent.x;
-          gGlobal.mouseHandler.y = iEvent.y;
+          gGlobal.mouseHandler.xInput = iEvent.x;
+          gGlobal.mouseHandler.yInput = iEvent.y;
 
         })
       }
@@ -86,6 +88,10 @@
 
       gGlobal.lastIterationTime = wTime;
 
+
+      var wSmooth = 0.8;
+      gGlobal.mouseHandler.x += wSmooth*(gGlobal.mouseHandler.xInput - gGlobal.mouseHandler.x);
+      gGlobal.mouseHandler.y += wSmooth*(gGlobal.mouseHandler.yInput - gGlobal.mouseHandler.y);
 
       var wViewPointCanvas = document.getElementById(gGlobal.ViewCanvasId);
       if (null == wViewPointCanvas) {
@@ -130,15 +136,17 @@
         for (var wi = 0; wi < gGlobal.offsetArrayX.length; ++wi) {
           
           var wMappedIndex = wi * 4;
+
+          if (0 == wHiddenImgPixelArray[wMappedIndex + 3] ) {
+            continue;
+          }
+
           var wMass = 0;
           wMass += wHiddenImgPixelArray[wMappedIndex];
           wMass += wHiddenImgPixelArray[wMappedIndex + 1];
           wMass += wHiddenImgPixelArray[wMappedIndex + 2];
           wMass /= 3;
-
-          if (0 == Math.floor(wMass) ) {
-            continue;
-          }
+          wMass += 1;
 
           var wX = wi % wCanvasWidth;
           var wY = Math.floor(wi / wCanvasWidth);
