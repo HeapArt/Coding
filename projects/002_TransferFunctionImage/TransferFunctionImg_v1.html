@@ -89,7 +89,7 @@
       gGlobal.lastIterationTime = wTime;
 
 
-      var wSmooth = 0.8;
+      var wSmooth = 0.3;
       gGlobal.mouseHandler.x += wSmooth*(gGlobal.mouseHandler.xInput - gGlobal.mouseHandler.x);
       gGlobal.mouseHandler.y += wSmooth*(gGlobal.mouseHandler.yInput - gGlobal.mouseHandler.y);
 
@@ -129,18 +129,13 @@
 
         var wK = 1000;
         var wC = 750;
-        var wQ = 1000000000;
+        var wQ = 100000000;
         var wRadLimit = 1000;
         var wRadLimitSq = wRadLimit * wRadLimit;
 
         for (var wi = 0; wi < gGlobal.offsetArrayX.length; ++wi) {
           
           var wMappedIndex = wi * 4;
-
-          if (0 == wHiddenImgPixelArray[wMappedIndex + 3] ) {
-            continue;
-          }
-
           var wMass = 0;
           wMass += wHiddenImgPixelArray[wMappedIndex];
           wMass += wHiddenImgPixelArray[wMappedIndex + 1];
