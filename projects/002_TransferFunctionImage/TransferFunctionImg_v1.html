@@ -123,11 +123,23 @@
 
         var wK = 1000;
         var wC = 750;
-        var wQ = 10000000;
+        var wQ = 1000000000;
         var wRadLimit = 1000;
         var wRadLimitSq = wRadLimit * wRadLimit;
 
         for (var wi = 0; wi < gGlobal.offsetArrayX.length; ++wi) {
+          
+          var wMappedIndex = wi * 4;
+          var wMass = 0;
+          wMass += wHiddenImgPixelArray[wMappedIndex];
+          wMass += wHiddenImgPixelArray[wMappedIndex + 1];
+          wMass += wHiddenImgPixelArray[wMappedIndex + 2];
+          wMass /= 3;
+
+          if (0 == Math.floor(wMass) ) {
+            continue;
+          }
+
           var wX = wi % wCanvasWidth;
           var wY = Math.floor(wi / wCanvasWidth);
           var wDx = wX + gGlobal.offsetArrayX[wi] - gGlobal.mouseHandler.x;
@@ -141,18 +153,10 @@
 
             var wFMag = wQ / (wRadSq);
             var wRad = Math.sqrt(wRadSq);
-            wFx += wFMag * wDx / wRad;
-            wFy += wFMag * wDy / wRad;
+            wFx += wFMag * wDx/wRad;
+            wFy += wFMag * wDy/wRad;
           }
           
-          var wMappedIndex = wi * 4;
-          var wMass = 0;
-          wMass += wHiddenImgPixelArray[wMappedIndex];
-          wMass += wHiddenImgPixelArray[wMappedIndex + 1];
-          wMass += wHiddenImgPixelArray[wMappedIndex + 2];
-          wMass /=3;
-          wMass += 100;
-
           gGlobal.velocityArrayX[wi] += wDt * wFx / wMass;
           gGlobal.velocityArrayY[wi] += wDt * wFy / wMass;
 
