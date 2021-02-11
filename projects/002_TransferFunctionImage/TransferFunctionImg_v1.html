@@ -20,34 +20,17 @@
       mouseHandler: {
         x: -1,
         y: -1,
-        xInput : - 1,
-        yInput : - 1,
+        xInput: - 1,
+        yInput: - 1,
+        mouseUsed: false
       },
 
       offsetArrayX: null,
       offsetArrayY: null,
       velocityArrayX: null,
       velocityArrayY: null,
-      lastIterationTime : 0
+      lastIterationTime: 0
     };
-
-    function transferFunction(iX, iY) {
-
-      var wDx = iX - gGlobal.mouseHandler.x;
-      var wDy = iY - gGlobal.mouseHandler.y;
-      var wRadSq = wDx * wDx + wDy * wDy;
-
-      return {
-        x: iX + Math.round(10 / wDx),
-        y: iY + Math.round(10 / wDy)
-      };
-
-      return {
-        x: iX,
-        y: iY
-      };
-
-    }
 
     function init() {
 
@@ -69,6 +52,7 @@
 
       gGlobal.ReferenceImage.onload = function () {
         gGlobal.ReferenceImageAvailable = true;
+        resize();
       }
 
       var wViewPointCanvas = document.getElementById(gGlobal.ViewCanvasId);
@@ -77,6 +61,20 @@
           gGlobal.mouseHandler.xInput = iEvent.x;
           gGlobal.mouseHandler.yInput = iEvent.y;
 
+          if (false == gGlobal.mouseHandler.mouseUsed) {
+            gGlobal.mouseHandler.x = gGlobal.mouseHandler.xInput;
+            gGlobal.mouseHandler.y = gGlobal.mouseHandler.yInput;
+            gGlobal.mouseHandler.mouseUsed = true;
+
+          }
+
+        })
+        
+        wViewPointCanvas.addEventListener("mouseout", function (iEvent) {
+          
+          if (true == gGlobal.mouseHandler.mouseUsed) {
+            gGlobal.mouseHandler.mouseUsed = false;
+          }
         })
       }
 
@@ -94,8 +92,8 @@
 
 
       var wSmooth = 0.8;
-      gGlobal.mouseHandler.x += wSmooth*(gGlobal.mouseHandler.xInput - gGlobal.mouseHandler.x);
-      gGlobal.mouseHandler.y += wSmooth*(gGlobal.mouseHandler.yInput - gGlobal.mouseHandler.y);
+      gGlobal.mouseHandler.x += wSmooth * (gGlobal.mouseHandler.xInput - gGlobal.mouseHandler.x);
+      gGlobal.mouseHandler.y += wSmooth * (gGlobal.mouseHandler.yInput - gGlobal.mouseHandler.y);
 
       var wViewPointCanvas = document.getElementById(gGlobal.ViewCanvasId);
       if (null == wViewPointCanvas) {
@@ -133,12 +131,12 @@
 
         var wK = 1000;
         var wC = 750;
-        var wQ = 100000000;
-        var wRadLimit = 1000;
+        var wQ = -750000;
+        var wRadLimit = 2000;
         var wRadLimitSq = wRadLimit * wRadLimit;
 
         for (var wi = 0; wi < gGlobal.offsetArrayX.length; ++wi) {
-          
+
           var wMappedIndex = wi * 4;
           var wMass = 0;
           wMass += wHiddenImgPixelArray[wMappedIndex];
@@ -155,21 +153,30 @@
           var wFx = - wK * gGlobal.offsetArrayX[wi] - wC * gGlobal.velocityArrayX[wi];
           var wFy = - wK * gGlobal.offsetArrayY[wi] - wC * gGlobal.velocityArrayY[wi];
 
-          var wRadSq = wDx * wDx + wDy * wDy;
-          if (wRadSq < wRadLimitSq) {
 
-            var wFMag = wQ / (wRadSq);
-            var wRad = Math.sqrt(wRadSq);
-            wFx += wFMag * wDx/wRad;
-            wFy += wFMag * wDy/wRad;
+          if (true == gGlobal.mouseHandler.mouseUsed) {
+            var wRadSq = wDx * wDx + wDy * wDy;
+            if ((1 < wRadSq)) {
+
+              var wRad = Math.sqrt(wRadSq);
+              var wGain = (wRadLimit - wRad)/wRadLimit;
+              if (wGain > 0.0) {
+                var wFMag = wQ * wGain;
+                wFx += wFMag * wDx / wRad;
+                wFy += wFMag * wDy / wRad;
+              }
+            }
           }
-          
+
           gGlobal.velocityArrayX[wi] += wDt * wFx / wMass;
           gGlobal.velocityArrayY[wi] += wDt * wFy / wMass;
 
           gGlobal.offsetArrayX[wi] += wDt * gGlobal.velocityArrayX[wi];
           gGlobal.offsetArrayY[wi] += wDt * gGlobal.velocityArrayY[wi];
         }
+
+
+
 
         for (var wi = 0; wi < gGlobal.offsetArrayX.length; ++wi) {
 
@@ -241,10 +248,10 @@
         gGlobal.velocityArrayY = new Float32Array(wArraySize);
 
         for (var wi = 0; wi < wArraySize; ++wi) {
-          gGlobal.offsetArrayX[wi] = 0;
-          gGlobal.offsetArrayY[wi] = 0;
-          gGlobal.velocityArrayX[wi] = 0;
-          gGlobal.velocityArrayY[wi] = 0;
+          gGlobal.offsetArrayX[wi] = 0.0;
+          gGlobal.offsetArrayY[wi] = 0.0;
+          gGlobal.velocityArrayX[wi] = 0.0;
+          gGlobal.velocityArrayY[wi] = 0.0;
 
         }
       }
