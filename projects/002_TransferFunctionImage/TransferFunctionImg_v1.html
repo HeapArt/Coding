@@ -58,8 +58,8 @@
       var wViewPointCanvas = document.getElementById(gGlobal.ViewCanvasId);
       if (null != wViewPointCanvas) {
         wViewPointCanvas.addEventListener("mousemove", function (iEvent) {
-          gGlobal.mouseHandler.xInput = iEvent.x;
-          gGlobal.mouseHandler.yInput = iEvent.y;
+          gGlobal.mouseHandler.xInput = iEvent.offsetX;
+          gGlobal.mouseHandler.yInput = iEvent.offsetY;
 
           if (false == gGlobal.mouseHandler.mouseUsed) {
             gGlobal.mouseHandler.x = gGlobal.mouseHandler.xInput;
@@ -71,6 +71,64 @@
         })
         
         wViewPointCanvas.addEventListener("mouseout", function (iEvent) {
+          
+          if (true == gGlobal.mouseHandler.mouseUsed) {
+            gGlobal.mouseHandler.mouseUsed = false;
+          }
+        })
+        
+        
+        wViewPointCanvas.addEventListener("touchstart", function(iEvent) {
+        
+          var wViewPointCanvas = document.getElementById(gGlobal.ViewCanvasId);
+          if (null == wViewPointCanvas) {
+            return;
+          }
+      
+          var wNode = wViewPointCanvas;
+          var wLeftOffset = 0;
+          var wTopOffset = 0;
+          
+          while (document.body != wNode){
+            wLeftOffset += wNode.offsetLeft;
+            wTopOffset +=  wNode.offsetTop;
+            wNode = wNode.parentNode;
+          }
+          
+          
+          gGlobal.mouseHandler.xInput = iEvent.changedTouches[0].pageX - wLeftOffset;
+          gGlobal.mouseHandler.yInput = iEvent.changedTouches[0].pageY - wTopOffset;
+          
+          if (false == gGlobal.mouseHandler.mouseUsed) {
+            gGlobal.mouseHandler.x = gGlobal.mouseHandler.xInput;
+            gGlobal.mouseHandler.y = gGlobal.mouseHandler.yInput;
+            gGlobal.mouseHandler.mouseUsed = true;
+          }
+        });
+        
+        wViewPointCanvas.addEventListener("touchmove", function(iEvent) {
+        
+          var wViewPointCanvas = document.getElementById(gGlobal.ViewCanvasId);
+          if (null == wViewPointCanvas) {
+            return;
+          }
+                
+          var wNode = wViewPointCanvas;
+          var wLeftOffset = 0;
+          var wTopOffset = 0;
+          
+          while (document.body != wNode){
+            wLeftOffset += wNode.offsetLeft;
+            wTopOffset +=  wNode.offsetTop;
+            wNode = wNode.parentNode;
+          }
+
+          gGlobal.mouseHandler.xInput = iEvent.changedTouches[0].pageX - wLeftOffset;
+          gGlobal.mouseHandler.yInput = iEvent.changedTouches[0].pageY - wTopOffset;
+        
+        });
+  
+        wViewPointCanvas.addEventListener("touchend", function (iEvent) {
           
           if (true == gGlobal.mouseHandler.mouseUsed) {
             gGlobal.mouseHandler.mouseUsed = false;
@@ -264,13 +322,15 @@
     body {
       width: 100vw;
       height: 100vh;
-      overflow: hidden;
+      overflow: scroll;
       margin: 0px;
       padding: 0px;
       background-color: black;
     }
 
     #id_ViewPoint_div {
+      position: relative;
+      bottom: -200px;
       width: 100%;
       height: 100%;
     }
