@@ -190,19 +190,24 @@
         var wK = 1000;
         var wC = 750;
         var wQ = -750000;
-        var wRadLimit = 2000;
+        var wRadLimit = 500;
         var wRadLimitSq = wRadLimit * wRadLimit;
 
         for (var wi = 0; wi < gGlobal.offsetArrayX.length; ++wi) {
 
           var wMappedIndex = wi * 4;
+		  
+		  if (0 == wHiddenImgPixelArray[wMappedIndex + 3]) {
+			continue;
+		  }
           var wMass = 0;
           wMass += wHiddenImgPixelArray[wMappedIndex];
           wMass += wHiddenImgPixelArray[wMappedIndex + 1];
           wMass += wHiddenImgPixelArray[wMappedIndex + 2];
           wMass /= 3;
-          wMass += 1;
-
+          
+		  wMass += 100;
+		  
           var wX = wi % wCanvasWidth;
           var wY = Math.floor(wi / wCanvasWidth);
           var wDx = wX + gGlobal.offsetArrayX[wi] - gGlobal.mouseHandler.x;
@@ -322,15 +327,13 @@
     body {
       width: 100vw;
       height: 100vh;
-      overflow: scroll;
+      overflow: hidden;
       margin: 0px;
       padding: 0px;
       background-color: black;
     }
 
     #id_ViewPoint_div {
-      position: relative;
-      bottom: -200px;
       width: 100%;
       height: 100%;
     }
