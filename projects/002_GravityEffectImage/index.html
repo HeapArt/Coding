@@ -152,8 +152,8 @@
         if (null != wCanvas) {
           var wCtx = wCanvas.getContext("2d");
           if (null != wCtx) {
-
-            wCtx.clearRect(0, 0, wCanvas.width, wCanvas.height);
+            
+            wCtx.clearRect(0,0,wCanvas.width, wCanvas.height );
             
             var wScaleWidth = gGlobal.HiddenImage.width / wCanvas.width;
             var wScaleHeight = gGlobal.HiddenImage.height / wCanvas.height;
@@ -174,55 +174,61 @@
 
       // Dynamic Calculations
       {
-        var wSpringConstant = 500;
-        var wDamper = 70;
+        var wCanvasWidth = gGlobal.HiddenCanvas.width;
+
         var wRadiusLimit = 500;
-        var wQ = -750;
         var wRadiusLimitSq = wRadiusLimit*wRadiusLimit;
 
+        var wK = 1000;
+        var wC = 750;
+        var wQ = -750000;
+
         for(var wi= 0; wi < gGlobal.Dynamic.offsetX.length; ++wi) {
-
-          // Get Pixel XY coordinate
-          var wX = wi % gGlobal.HiddenCanvas.width;
-          var wY = Math.floor(wi / gGlobal.HiddenCanvas.width);
-
-          // Add Pixel Offset
-          var wCurrentX = wX + gGlobal.Dynamic.offsetX[wi];
-          var wCurrentY = wY + gGlobal.Dynamic.offsetY[wi];
-
-          var wMass = 100;
-          var wFx = - wSpringConstant*gGlobal.Dynamic.offsetX[wi] - wDamper*gGlobal.Dynamic.dx[wi];
-
-          var wFy = - wSpringConstant*gGlobal.Dynamic.offsetY[wi] - wDamper*gGlobal.Dynamic.dy[wi];
           
+          var wFx = -wK*gGlobal.Dynamic.offsetX[wi];
+          wFx += - wC*gGlobal.Dynamic.dx[wi];
+
+          var wFy = -wK*gGlobal.Dynamic.offsetY[wi];
+          wFy += - wC*gGlobal.Dynamic.dy[wi];
+
           if (gGlobal.mousHandler.used) {
 
-            var wDxFromMouse = wCurrentX - gGlobal.mousHandler.x;
+            // Get Pixel XY coordinate
+            var wX = wi % wCanvasWidth;
+            var wY = Math.floor(wi / wCanvasWidth);
 
-            var wDyFromMouse = wCurrentY - gGlobal.mousHandler.y;
+            // Add Pixel Offset
+            var wCurX = wX + gGlobal.Dynamic.offsetX[wi];
+            var wCurY = wY + gGlobal.Dynamic.offsetY[wi];
+            
+            var wDxMouse = wCurX - gGlobal.mousHandler.x;
+            var wDyMouse = wCurY - gGlobal.mousHandler.y;
+          
+            var wRadSq = wDxMouse*wDxMouse + wDyMouse*wDyMouse;
 
-            var wRadSq = wDxFromMouse*wDxFromMouse + wDyFromMouse*wDyFromMouse;
-
-            if (wRadSq > 1) {
-              if ( wRadiusLimitSq > wRadSq) {
+            if (1 < wRadSq) {
+              if (wRadiusLimitSq > wRadSq) {
                 var wRadius = Math.sqrt(wRadSq);
+
                 var wGain = wRadiusLimit - wRadius;
+                wGain /= wRadiusLimit;
 
                 if (wGain > 0) {
-                  var wForceMag = wQ*wGain;
-                  wFx += wForceMag* wDxFromMouse/wRadius;
-                  wFy += wForceMag* wDyFromMouse/wRadius;
-
+                  var wFMag = wQ * wGain;
+                  wFx += wFMag * (wDxMouse / wRadius);
+                  wFy += wFMag * (wDyMouse / wRadius);
                 }
               }
             }
           }
 
-          var wAx = wFx / wMass;
-          var wAy = wFy / wMass;
+          var wMass = 250;
 
-          gGlobal.Dynamic.dx[wi] = wAx*wDt;
-          gGlobal.Dynamic.dy[wi] = wAy*wDt;
+          var wAx = wFx/wMass;
+          var wAy = wFy/wMass;
+
+          gGlobal.Dynamic.dx[wi] += wAx*wDt;
+          gGlobal.Dynamic.dy[wi] += wAy*wDt;
 
           gGlobal.Dynamic.offsetX[wi] += gGlobal.Dynamic.dx[wi] * wDt;
           gGlobal.Dynamic.offsetY[wi] += gGlobal.Dynamic.dy[wi] * wDt;
@@ -261,7 +267,9 @@
           return;
         }
 
-        wViewPointCtx.clearRect(0,0,wViewPoint.width, wViewPoint.height);
+        // Clear Canvas
+
+        wViewPointCtx.clearRect(0,0, wViewPoint.width, wViewPoint.height);
 
         // Get ViewPoint Image Data
         var wViewPointImageData = wViewPointCtx.getImageData(0, 0, wViewPoint.width, wViewPoint.height);
