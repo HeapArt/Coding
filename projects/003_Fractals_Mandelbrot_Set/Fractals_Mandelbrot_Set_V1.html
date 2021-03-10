@@ -12,7 +12,31 @@
         scale : 0.01,
       },
 
-      MaxIteration : 255
+      MaxIteration : 255,
+
+      LastX : 0,
+      LastY : 0,
+      Jump: 500,
+
+      ColorMap : [[0,0,0,1],[1,0,0,1],[1,1,0,1],[0,1,0,1],[0,1,1,1],[0,0,1,1],[1,0,1,1],[1,1,1,1]],
+
+    }
+
+    function getColor(iPercentage) {
+      var wIndex = iPercentage * (gGlobal.ColorMap.length - 1);
+      var wUpper = Math.ceil(wIndex);
+      var wLower = Math.floor(wIndex);
+      
+
+      var wColor = [0,0,0,0];
+      var wFraction = wIndex - wLower;
+
+      for (var wi = 0; wi < wColor.length; ++wi) {
+        wColor[wi] = wFraction*(gGlobal.ColorMap[wUpper][wi] - gGlobal.ColorMap[wLower][wi]) + gGlobal.ColorMap[wLower][wi];
+        wColor[wi] *= 255;
+        wColor[wi] = Math.round(wColor[wi]);
+      }
+      return wColor;
     }
 
     function drawMandelbrotSet( iCanvas, iZoom ) {
@@ -30,10 +54,10 @@
 
       var wImageData = wCtx.getImageData(0, 0, wCanvasWidth, wCanvasHeight);
       var wPixelData = wImageData.data;
+      
 
-
-      for (var wX = 0; wX < wCanvasWidth; ++ wX) {
-        for (var wY = 0; wY < wCanvasHeight; ++ wY) {
+      for (var wX = gGlobal.LastX, wCountX = 0; wX < wCanvasWidth && wCountX < gGlobal.Jump; ++ wX, ++wCountX) {
+        for (var wY = gGlobal.LastY, wCountY = 0; wY < wCanvasHeight && wCountY < gGlobal.Jump; ++ wY, ++wCountY) {
           var wIndex = 4*(wY* wCanvasWidth + wX);
 
           var wColor = [0,0,0,255];
@@ -60,12 +84,7 @@
           }
 
 
-          if (wCount < gGlobal.MaxIteration) {
-          
-            var wColorNumber = gGlobal.MaxIteration - wCount;
-            wColor = [Math.round(255*(wColorNumber/gGlobal.MaxIteration)),0,0,255];
-
-          }
+            wColor = getColor(1 - wCount/gGlobal.MaxIteration);
 
           wPixelData[wIndex] = wColor[0];
           wPixelData[wIndex + 1] = wColor[1];
@@ -77,6 +96,21 @@
 
       wCtx.putImageData(wImageData, 0, 0);
 
+      gGlobal.LastX += gGlobal.Jump;
+
+      if (gGlobal.LastX >= wCanvasWidth) {
+        gGlobal.LastX = 0;
+        gGlobal.LastY += gGlobal.Jump;
+        if (gGlobal.LastY >= wCanvasHeight) {
+          gGlobal.LastX = 0;
+          gGlobal.LastY = 0;
+
+          return true;
+        }
+      }
+
+      return false;
+
     }
 
 
@@ -84,12 +118,17 @@
       window.requestAnimationFrame(animate);
 
       var wChanged = false;
-      wChanged = true;
+      if (true == gGlobal.Redraw) {
+        wChanged = true;
+      }
+
       if (wChanged) {
         var wCanvas = document.getElementById(gGlobal.CanvasId);
         if (null != wCanvas) {
           drawMandelbrotSet(wCanvas, gGlobal.Zoom);
         }
+
+       // gGlobal.Redraw = false;
       }
     }
 
@@ -100,6 +139,8 @@
         wCanvas.width = wCanvas.parentNode.offsetWidth;
         wCanvas.height = wCanvas.parentNode.offsetHeight;
       }
+
+      gGlobal.Redraw = true;
     }
 
     function init () {
@@ -111,26 +152,22 @@
         var wLimitSide = wCanvas.width < wCanvas.height ?  wCanvas.width : wCanvas.height;
         gGlobal.Zoom.scale = 3/wLimitSide;
       
-        wCanvas.addEventListener("wheel", function(e) {
-
-          if (0 < e.deltaY) {
-            gGlobal.Zoom.scale *=  1/0.9;
-          }
-          else {
-            gGlobal.Zoom.scale *= 0.9;
-          }
-
+        wCanvas.addEventListener("wheel", function(e) {         
+          gGlobal.Zoom.scale *=  Math.pow(1.001, e.deltaY);
+          gGlobal.Redraw = true;
         });
 
         
         wCanvas.addEventListener("mousedown", function (e) {
-
            gGlobal.Zoom.offsetX += gGlobal.Zoom.scale *(e.x - wCanvas.width/2);
            gGlobal.Zoom.offsetY += gGlobal.Zoom.scale *(e.y - wCanvas.height/2);
+           
+           gGlobal.Redraw = true;
 
         });
       }
 
+      gGlobal.Redraw = true;
       animate();
     }
 
