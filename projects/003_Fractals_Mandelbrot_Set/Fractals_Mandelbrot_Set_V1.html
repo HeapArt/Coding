@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script>
+
+    var gGlobal = {
+      CanvasId : "id_ViewPoint",
+      Zoom : {
+        offsetX : 0,
+        offsetY : 0,
+        scale : 0.01,
+      },
+
+      MaxIteration : 255
+    }
+
+    function drawMandelbrotSet( iCanvas, iZoom ) {
+      if (null == iCanvas) {
+        return;
+      }
+
+      var wCtx = iCanvas.getContext("2d");
+      if (null == wCtx) {
+        return;
+      }
+
+      var wCanvasWidth = iCanvas.width;
+      var wCanvasHeight = iCanvas.height;
+
+      var wImageData = wCtx.getImageData(0, 0, wCanvasWidth, wCanvasHeight);
+      var wPixelData = wImageData.data;
+
+
+      for (var wX = 0; wX < wCanvasWidth; ++ wX) {
+        for (var wY = 0; wY < wCanvasHeight; ++ wY) {
+          var wIndex = 4*(wY* wCanvasWidth + wX);
+
+          var wColor = [0,0,0,255];
+
+          var wRow = iZoom.scale*(wX - wCanvasWidth/2) + iZoom.offsetX;
+          var wCol = iZoom.scale*(wY - wCanvasHeight/2) + iZoom.offsetY;
+
+          var wCount = 0;
+          var wReal = 0;
+          var wImaginary = 0;
+
+          for (wCount = 0; wCount < gGlobal.MaxIteration; ++wCount) {
+
+              if (wReal*wReal + wImaginary*wImaginary > 4 ) {
+                break;
+              }
+              var wReal_new = wReal*wReal - wImaginary*wImaginary + wRow;
+              var wImaginary_new = 2*wReal*wImaginary + wCol; 
+
+              wReal = wReal_new;
+              wImaginary = wImaginary_new;
+
+
+          }
+
+
+          if (wCount < gGlobal.MaxIteration) {
+          
+            var wColorNumber = gGlobal.MaxIteration - wCount;
+            wColor = [Math.round(255*(wColorNumber/gGlobal.MaxIteration)),0,0,255];
+
+          }
+
+          wPixelData[wIndex] = wColor[0];
+          wPixelData[wIndex + 1] = wColor[1];
+          wPixelData[wIndex + 2] = wColor[2];
+          wPixelData[wIndex + 3] = wColor[3];
+        }
+      }
+
+
+      wCtx.putImageData(wImageData, 0, 0);
+
+    }
+
+
+    function animate() {
+      window.requestAnimationFrame(animate);
+
+      var wChanged = false;
+      wChanged = true;
+      if (wChanged) {
+        var wCanvas = document.getElementById(gGlobal.CanvasId);
+        if (null != wCanvas) {
+          drawMandelbrotSet(wCanvas, gGlobal.Zoom);
+        }
+      }
+    }
+
+    function resize() {
+
+      var wCanvas = document.getElementById(gGlobal.CanvasId);
+      if (null != wCanvas) {
+        wCanvas.width = wCanvas.parentNode.offsetWidth;
+        wCanvas.height = wCanvas.parentNode.offsetHeight;
+      }
+    }
+
+    function init () {
+      resize();
+      window.addEventListener("resize", resize);
+      
+      var wCanvas = document.getElementById(gGlobal.CanvasId);
+      if (null != wCanvas) {
+        var wLimitSide = wCanvas.width < wCanvas.height ?  wCanvas.width : wCanvas.height;
+        gGlobal.Zoom.scale = 3/wLimitSide;
+      
+        wCanvas.addEventListener("wheel", function(e) {
+
+          if (0 < e.deltaY) {
+            gGlobal.Zoom.scale *=  1/0.9;
+          }
+          else {
+            gGlobal.Zoom.scale *= 0.9;
+          }
+
+        });
+
+        
+        wCanvas.addEventListener("mousedown", function (e) {
+
+           gGlobal.Zoom.offsetX += gGlobal.Zoom.scale *(e.x - wCanvas.width/2);
+           gGlobal.Zoom.offsetY += gGlobal.Zoom.scale *(e.y - wCanvas.height/2);
+
+        });
+      }
+
+      animate();
+    }
+
+    window.addEventListener("load", init);
+
+  </script>
+  <style>
+    body {
+      margin: 0px;
+      padding: 0px;
+      height: 100vh;
+      width: 100%;
+    }
+
+    #id_ViewPoint_div {
+      width: 100%;
+      height: 100%;
+    }
+
+  </style>
+</head>
+<body>
+  <div id="id_ViewPoint_div">
+    <canvas id="id_ViewPoint"></canvas>
+  </div>
+</body>
+</html>
