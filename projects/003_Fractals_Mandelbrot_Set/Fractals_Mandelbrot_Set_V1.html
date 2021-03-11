@@ -12,14 +12,16 @@
         scale : 0.01,
       },
 
-      MaxIteration : 255,
+      MaxIteration : 1000,
 
       LastX : 0,
       LastY : 0,
       Jump: 500,
+      Intervals : 10,
 
       ColorMap : [[0,0,0,1],[1,0,0,1],[1,1,0,1],[0,1,0,1],[0,1,1,1],[0,0,1,1],[1,0,1,1],[1,1,1,1]],
 
+      DrawState : 0
     }
 
     function getColor(iPercentage) {
@@ -84,7 +86,7 @@
           }
 
 
-            wColor = getColor(1 - wCount/gGlobal.MaxIteration);
+          wColor = getColor(1 - wCount/gGlobal.MaxIteration);
 
           wPixelData[wIndex] = wColor[0];
           wPixelData[wIndex + 1] = wColor[1];
@@ -113,22 +115,51 @@
 
     }
 
+    function TransFormImage(dx,dy, dScale) {
+      var wCanvas = document.getElementById(gGlobal.CanvasId);
+      if (null == wCanvas) {
+        return;
+      }
+
+      var wMainCtx = wCanvas.getContext("2d");
+      if (null == wMainCtx) {
+        return;
+      }
+
+      var wTempCanvas = document.createElement("canvas");
+      wTempCanvas.width = wCanvas.width;
+      wTempCanvas.height = wCanvas.height;
+      var wTempCtx = wTempCanvas.getContext("2d");
+
+      wTempCtx.drawImage(wCanvas, dx,dy);
+
+      wMainCtx.clearRect(0,0,wCanvas.width, wCanvas.height);
+      wMainCtx.drawImage(wTempCanvas,0,0,dScale*wCanvas.width, dScale*wCanvas.height);
+
+    }
 
     function animate() {
       window.requestAnimationFrame(animate);
 
       var wChanged = false;
       if (true == gGlobal.Redraw) {
-        wChanged = true;
+        gGlobal.DrawState = 0;
+        gGlobal.LastX = 0;
+        gGlobal.LastY = 0;
+        gGlobal.Redraw = false;
       }
 
-      if (wChanged) {
+      if (0 == gGlobal.DrawState) {
+        
         var wCanvas = document.getElementById(gGlobal.CanvasId);
         if (null != wCanvas) {
-          drawMandelbrotSet(wCanvas, gGlobal.Zoom);
+          if (true == drawMandelbrotSet(wCanvas, gGlobal.Zoom)){
+            gGlobal.DrawState = 1;
+          }
         }
-
-       // gGlobal.Redraw = false;
+        else {
+          gGlobal.DrawState = 1;
+        }
       }
     }
 
@@ -138,6 +169,10 @@
       if (null != wCanvas) {
         wCanvas.width = wCanvas.parentNode.offsetWidth;
         wCanvas.height = wCanvas.parentNode.offsetHeight;
+
+        var wLargerSide = wCanvas.width > wCanvas.height ? wCanvas.width : wCanvas.height;
+
+        gGlobal.Jump = Math.round(wLargerSide / gGlobal.Intervals);
       }
 
       gGlobal.Redraw = true;
@@ -152,17 +187,29 @@
         var wLimitSide = wCanvas.width < wCanvas.height ?  wCanvas.width : wCanvas.height;
         gGlobal.Zoom.scale = 3/wLimitSide;
       
-        wCanvas.addEventListener("wheel", function(e) {         
-          gGlobal.Zoom.scale *=  Math.pow(1.001, e.deltaY);
+        wCanvas.addEventListener("wheel", function(e) {
+          var wScale = Math.pow(1.001, e.deltaY)
+          gGlobal.Zoom.scale *= wScale;
           gGlobal.Redraw = true;
+          
+          var wCanvas = document.getElementById(gGlobal.CanvasId);
+          if (null != wCanvas) {
+            
+            var wDx = Math.round((wScale - 1 )*wCanvas.width/2);
+            var wDy = Math.round((wScale - 1 )*wCanvas.height/2);
+            TransFormImage(wDx,wDy,1/wScale );
+          }
         });
 
         
         wCanvas.addEventListener("mousedown", function (e) {
-           gGlobal.Zoom.offsetX += gGlobal.Zoom.scale *(e.x - wCanvas.width/2);
-           gGlobal.Zoom.offsetY += gGlobal.Zoom.scale *(e.y - wCanvas.height/2);
+           var wDx = e.x - wCanvas.width/2;
+           var wDy = e.y - wCanvas.height/2;
+           gGlobal.Zoom.offsetX += gGlobal.Zoom.scale *wDx;
+           gGlobal.Zoom.offsetY += gGlobal.Zoom.scale *wDy;
            
            gGlobal.Redraw = true;
+           TransFormImage(-wDx, -wDy,1);
 
         });
       }
