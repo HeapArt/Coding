@@ -21,7 +21,18 @@
 
       ColorMap : [[0,0,0,1],[1,0,0,1],[1,1,0,1],[0,1,0,1],[0,1,1,1],[0,0,1,1],[1,0,1,1],[1,1,1,1]],
 
-      DrawState : 0
+      DrawCanvas : document.createElement("canvas"),
+      ViewPointOffsetX : 0,
+      ViewPointOffsetY : 0,
+      DrawState : 0,
+
+      MouseHandler : {
+        OriginX : 0,
+        OriginY : 0,
+        DX : 0,
+        Dy : 0,
+        InUse : false
+      }
     }
 
     function getColor(iPercentage) {
@@ -115,26 +126,22 @@
 
     }
 
-    function TransFormImage(dx,dy, dScale) {
-      var wCanvas = document.getElementById(gGlobal.CanvasId);
-      if (null == wCanvas) {
-        return;
-      }
+    function TransFormImage(iCanvas, dx,dy, dScale) {
 
-      var wMainCtx = wCanvas.getContext("2d");
+      var wMainCtx = iCanvas.getContext("2d");
       if (null == wMainCtx) {
         return;
       }
 
       var wTempCanvas = document.createElement("canvas");
-      wTempCanvas.width = wCanvas.width;
-      wTempCanvas.height = wCanvas.height;
+      wTempCanvas.width = iCanvas.width;
+      wTempCanvas.height = iCanvas.height;
       var wTempCtx = wTempCanvas.getContext("2d");
 
-      wTempCtx.drawImage(wCanvas, dx,dy);
+      wTempCtx.drawImage(iCanvas, dx,dy);
 
-      wMainCtx.clearRect(0,0,wCanvas.width, wCanvas.height);
-      wMainCtx.drawImage(wTempCanvas,0,0,dScale*wCanvas.width, dScale*wCanvas.height);
+      wMainCtx.clearRect(0,0,iCanvas.width, iCanvas.height);
+      wMainCtx.drawImage(wTempCanvas,0,0,dScale*iCanvas.width, dScale*iCanvas.height);
 
     }
 
@@ -150,17 +157,19 @@
       }
 
       if (0 == gGlobal.DrawState) {
-        
-        var wCanvas = document.getElementById(gGlobal.CanvasId);
-        if (null != wCanvas) {
-          if (true == drawMandelbrotSet(wCanvas, gGlobal.Zoom)){
+        if (true == drawMandelbrotSet(gGlobal.DrawCanvas, gGlobal.Zoom)){
             gGlobal.DrawState = 1;
-          }
-        }
-        else {
-          gGlobal.DrawState = 1;
         }
       }
+
+      var wCanvas = document.getElementById(gGlobal.CanvasId);
+      if (null != wCanvas) {
+        var wCtx = wCanvas.getContext("2d");
+        var wDx = gGlobal.ViewPointOffsetX - wCanvas.width;
+        var wDy = gGlobal.ViewPointOffsetY - wCanvas.height;
+        wCtx.drawImage(gGlobal.DrawCanvas,wDx,wDy,gGlobal.DrawCanvas.width, gGlobal.DrawCanvas.height);
+      }
+
     }
 
     function resize() {
@@ -170,8 +179,9 @@
         wCanvas.width = wCanvas.parentNode.offsetWidth;
         wCanvas.height = wCanvas.parentNode.offsetHeight;
 
+        gGlobal.DrawCanvas.width = 3*wCanvas.width;
+        gGlobal.DrawCanvas.height = 3*wCanvas.height;
         var wLargerSide = wCanvas.width > wCanvas.height ? wCanvas.width : wCanvas.height;
-
         gGlobal.Jump = Math.round(wLargerSide / gGlobal.Intervals);
       }
 
@@ -192,26 +202,55 @@
           gGlobal.Zoom.scale *= wScale;
           gGlobal.Redraw = true;
           
-          var wCanvas = document.getElementById(gGlobal.CanvasId);
-          if (null != wCanvas) {
+          var wDx = Math.round((wScale - 1 )*gGlobal.DrawCanvas.width/2);
+          var wDy = Math.round((wScale - 1 )*gGlobal.DrawCanvas.height/2);
+          TransFormImage(gGlobal.DrawCanvas, wDx,wDy,1/wScale );
             
-            var wDx = Math.round((wScale - 1 )*wCanvas.width/2);
-            var wDy = Math.round((wScale - 1 )*wCanvas.height/2);
-            TransFormImage(wDx,wDy,1/wScale );
-          }
         });
 
         
         wCanvas.addEventListener("mousedown", function (e) {
-           var wDx = e.x - wCanvas.width/2;
-           var wDy = e.y - wCanvas.height/2;
-           gGlobal.Zoom.offsetX += gGlobal.Zoom.scale *wDx;
-           gGlobal.Zoom.offsetY += gGlobal.Zoom.scale *wDy;
-           
-           gGlobal.Redraw = true;
-           TransFormImage(-wDx, -wDy,1);
+          gGlobal.MouseHandler.InUse = true;
+          gGlobal.MouseHandler.OriginX = e.x;
+          gGlobal.MouseHandler.OriginY = e.y;
+
+          gGlobal.ViewPointOffsetX = 0;
+          gGlobal.ViewPointOffsetY = 0;
 
         });
+
+        wCanvas.addEventListener("mousemove", function (e) {
+
+          if (true == gGlobal.MouseHandler.InUse) {
+            
+            var wDx = e.x - gGlobal.MouseHandler.OriginX;
+            var wDy = e.y - gGlobal.MouseHandler.OriginY;
+            gGlobal.ViewPointOffsetX = wDx;
+            gGlobal.ViewPointOffsetY = wDy;
+            
+          }
+        });
+
+        var wMouseDone = function(e) {
+
+          if (true == gGlobal.MouseHandler.InUse) {
+            gGlobal.MouseHandler.InUse = false;
+
+            var wDx = e.x - gGlobal.MouseHandler.OriginX;
+            var wDy = e.y - gGlobal.MouseHandler.OriginY;
+            gGlobal.Zoom.offsetX -= gGlobal.Zoom.scale * wDx;
+            gGlobal.Zoom.offsetY -= gGlobal.Zoom.scale * wDy;
+
+            gGlobal.ViewPointOffsetX = 0;
+            gGlobal.ViewPointOffsetY = 0;
+            TransFormImage(gGlobal.DrawCanvas, wDx, wDy, 1);
+            gGlobal.Redraw = true;
+          }
+        }
+        
+        wCanvas.addEventListener("mouseup", wMouseDone);
+        wCanvas.addEventListener("mouseout", wMouseDone);
+
       }
 
       gGlobal.Redraw = true;
