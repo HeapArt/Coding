@@ -13,13 +13,13 @@
       },
 
       MaxIteration : 1000,
+      ColorArray : [],
+      ColorMap : [[0,0,0,1],[1,0,0,1],[1,1,0,1],[0,1,0,1],[0,1,1,1],[0,0,1,1],[1,0,1,1],[1,1,1,1]],
 
       LastX : 0,
       LastY : 0,
       Jump: 500,
-      Intervals : 10,
-
-      ColorMap : [[0,0,0,1],[1,0,0,1],[1,1,0,1],[0,1,0,1],[0,1,1,1],[0,0,1,1],[1,0,1,1],[1,1,1,1]],
+      Intervals : 5,
 
       DrawCanvas : document.createElement("canvas"),
       ViewPointOffsetX : 0,
@@ -32,7 +32,8 @@
         DX : 0,
         Dy : 0,
         InUse : false
-      }
+      },
+
     }
 
     function getColor(iPercentage) {
@@ -97,7 +98,7 @@
           }
 
 
-          wColor = getColor(1 - wCount/gGlobal.MaxIteration);
+          wColor = gGlobal.ColorArray[wCount];
 
           wPixelData[wIndex] = wColor[0];
           wPixelData[wIndex + 1] = wColor[1];
@@ -251,6 +252,10 @@
         wCanvas.addEventListener("mouseup", wMouseDone);
         wCanvas.addEventListener("mouseout", wMouseDone);
 
+      }
+
+      for (var wi = 0; wi <= gGlobal.MaxIteration ; ++wi) {
+        gGlobal.ColorArray.push(getColor(1 - wi/gGlobal.MaxIteration));
       }
 
       gGlobal.Redraw = true;
