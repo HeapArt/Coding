@@ -2,6 +2,9 @@
 <html>
 
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Fractals - Mandelbrot Set</title>
+
   <script>
 
     var gGlobal = {
@@ -16,11 +19,7 @@
       ColorArray : [],
       ColorMap : [[0,0,0,1],[1,0,0,1],[1,1,0,1],[0,1,0,1],[0,1,1,1],[0,0,1,1],[1,0,1,1],[1,1,1,1]],
 
-      LastX : 0,
-      LastY : 0,
-      Jump: 500,
-      Intervals : 5,
-      RingCount : 5,
+      RingCount : 6,
       RingIndex : 0,
       RingBlockCount : 0,
 
@@ -77,8 +76,8 @@
       var wXEnd = iX0 > iXEnd ? iX0 : iXEnd;
       var wYEnd = iY0 > iYEnd ? iY0 : iYEnd;
 
-      for (var wX = wX0; wX < wCanvasWidth && wX < wXEnd; ++ wX) {
-        for (var wY = wY0; wY < wCanvasHeight && wY < wYEnd; ++ wY) {
+      for (var wX = wX0; wX < wCanvasWidth && wX < wXEnd; ++wX) {
+        for (var wY = wY0; wY < wCanvasHeight && wY < wYEnd; ++wY) {
           var wIndex = 4*(wY* wCanvasWidth + wX);
 
           var wColor = [0,0,0,255];
@@ -109,6 +108,7 @@
           wPixelData[wIndex + 1] = wColor[1];
           wPixelData[wIndex + 2] = wColor[2];
           wPixelData[wIndex + 3] = wColor[3];
+          
         }
       }
 
@@ -139,10 +139,8 @@
 
       var wChanged = false;
       if (true == gGlobal.Redraw) {
-        gGlobal.DrawState = 0;
-        gGlobal.LastX = 0;
-        gGlobal.LastY = 0;
         gGlobal.Redraw = false;
+        gGlobal.DrawState = 0;
         
         gGlobal.RingIndex = 0;
         gGlobal.RingBlockCount = 0;
@@ -157,8 +155,8 @@
         var wRingQuad = Math.floor(gGlobal.RingBlockCount / (wRingSideLength - 1));
         var wRingQuadIndex = gGlobal.RingBlockCount % (wRingSideLength - 1);
 
-        var wJumpX = 0.5*gGlobal.DrawCanvas.width/gGlobal.RingCount;
-        var wJumpY = 0.5*gGlobal.DrawCanvas.height/gGlobal.RingCount;
+        var wJumpX = Math.round(0.5*gGlobal.DrawCanvas.width/gGlobal.RingCount);
+        var wJumpY = Math.round(0.5*gGlobal.DrawCanvas.height/gGlobal.RingCount);
 
         // wRingQuad = 0
         var wQuadStartX = -(gGlobal.RingIndex + 1)*wJumpX;
@@ -181,8 +179,8 @@
           var wJumpDirection = [0,-1];
         }
 
-        var wX0 = wQuadStartX + wRingQuadIndex*wJumpDirection[0]*wJumpX + gGlobal.DrawCanvas.width/2;
-        var wY0 = wQuadStartY + wRingQuadIndex*wJumpDirection[1]*wJumpY + gGlobal.DrawCanvas.height/2;
+        var wX0 = wQuadStartX + wRingQuadIndex*wJumpDirection[0]*wJumpX + Math.ceil(gGlobal.DrawCanvas.width/2);
+        var wY0 = wQuadStartY + wRingQuadIndex*wJumpDirection[1]*wJumpY + Math.ceil(gGlobal.DrawCanvas.height/2);
         var wXEnd = wX0 + wJumpX;
         var wYEnd = wY0 + wJumpY;
         
@@ -220,8 +218,6 @@
 
         gGlobal.DrawCanvas.width = 3*wCanvas.width;
         gGlobal.DrawCanvas.height = 3*wCanvas.height;
-        var wLargerSide = wCanvas.width > wCanvas.height ? wCanvas.width : wCanvas.height;
-        gGlobal.Jump = Math.round(wLargerSide / gGlobal.Intervals);
       }
 
       gGlobal.Redraw = true;
@@ -316,7 +312,6 @@
       height: 100%;
     }
     
-
   </style>
 </head>
 <body>
