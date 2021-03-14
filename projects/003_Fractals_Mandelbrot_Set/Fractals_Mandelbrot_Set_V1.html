@@ -32,8 +32,16 @@
       MouseHandler : {
         OriginX : 0,
         OriginY : 0,
-        DX : 0,
-        Dy : 0,
+        InUse : false
+      },
+      
+      TouchHandler : {
+        OriginX : 0,
+        OriginY : 0,
+        OriginalSpread: 0,
+        PreX : 0,
+        PreY : 0,
+        PreSpread: 0,
         InUse : false
       },
 
@@ -128,8 +136,8 @@
         return;
       }
 
-      var wDx = iDx + iDScale*(1/iDScale - 1)*iCanvas.width/2; 
-      var wDy = iDy + iDScale*(1/iDScale - 1)*iCanvas.height/2;
+      var wDx = iDx + (1 - iDScale)*iCanvas.width/2; 
+      var wDy = iDy + (1 - iDScale)*iCanvas.height/2;
       var wNewWidth = iDScale*iCanvas.width; 
       var wNewHeight = iDScale*iCanvas.height;
       
@@ -162,7 +170,8 @@
       gGlobal.Zoom.offsetX -= gGlobal.Zoom.scale*iDx;
       gGlobal.Zoom.offsetY -= gGlobal.Zoom.scale*iDy;
       
-      TransFormImage(gGlobal.DrawCanvas, iDx, iDy, 1/iDScale);
+      TransFormImage(gGlobal.DrawCanvas, iDx, iDy, 1.0);
+      TransFormImage(gGlobal.DrawCanvas, 0, 0, 1/iDScale);
     }
 
     function animate() {
@@ -278,6 +287,7 @@
           gGlobal.MouseHandler.OriginY = e.y;
 
           ResetTransformViewPoint();
+          e.stopPropagation();
 
         });
 
@@ -291,6 +301,7 @@
             TransformViewPoint(wDx, wDy, 1.0);
             
           }
+          e.stopPropagation();
         });
 
         var wMouseDone = function(e) {
@@ -306,10 +317,118 @@
             
             gGlobal.Redraw = true;
           }
+          e.stopPropagation();
         }
         
         wCanvas.addEventListener("mouseup", wMouseDone);
         wCanvas.addEventListener("mouseout", wMouseDone);
+
+        
+        wCanvas.addEventListener("touchstart", function(e) {
+
+          if (0 == e.touches.length) {
+            gGlobal.TouchHandler.InUse = false;
+            return;          
+          }
+          gGlobal.TouchHandler.InUse = true;          
+          gGlobal.TouchHandler.OriginX = 0;
+          gGlobal.TouchHandler.OriginY = 0;
+
+          for (var wi = 0; wi < e.touches.length; ++wi) {
+            gGlobal.TouchHandler.OriginX += e.touches[wi].pageX;
+            gGlobal.TouchHandler.OriginY += e.touches[wi].pageY;
+          }
+          gGlobal.TouchHandler.OriginX /= e.touches.length;
+          gGlobal.TouchHandler.OriginY /= e.touches.length;
+
+          if (2 <= e.touches.length) {
+  
+            var wDx = e.touches[0].pageX - e.touches[1].pageX;
+            var wDy = e.touches[0].pageY - e.touches[1].pageY;
+
+            gGlobal.TouchHandler.OriginalSpread = wDx*wDx + wDy*wDy;
+          
+          }
+          else {
+            gGlobal.TouchHandler.OriginalSpread = 0;
+          }
+
+          gGlobal.TouchHandler.PreX = gGlobal.TouchHandler.OriginX;
+          gGlobal.TouchHandler.PreY = gGlobal.TouchHandler.OriginY;
+          gGlobal.TouchHandler.PreSpread = gGlobal.TouchHandler.OriginalSpread;
+
+          ResetTransformViewPoint();
+          e.stopPropagation();
+
+        });
+
+        wCanvas.addEventListener("touchmove", function(e) {
+
+          if (true == gGlobal.TouchHandler.InUse) {
+            if (0 == e.touches.length) {
+              gGlobal.TouchHandler.InUse = false;
+              return;          
+            }
+            
+            var wNewX = 0;
+            var wNewY = 0;
+
+            for (var wi = 0; wi < e.touches.length; ++wi) {
+              wNewX += e.touches[wi].pageX;
+              wNewY += e.touches[wi].pageY;
+            }
+            wNewX /= e.touches.length;
+            wNewY /= e.touches.length;
+
+            var wScale = 1.0;
+            var wSpread = 0.0;
+            if (2 <= e.touches.length) {
+
+              var wDx = e.touches[0].pageX - e.touches[1].pageX;
+              var wDy = e.touches[0].pageY - e.touches[1].pageY;
+
+              wSpread = wDx * wDx + wDy * wDy;
+
+              wScale = Math.sqrt(wSpread/gGlobal.TouchHandler.OriginalSpread);
+            }
+
+            gGlobal.TouchHandler.PreX = wNewX;
+            gGlobal.TouchHandler.PreY = wNewY;
+            gGlobal.TouchHandler.PreSpread = wSpread;
+
+            var wPDx = wNewX - gGlobal.TouchHandler.OriginX;
+            var wPDy = wNewY - gGlobal.TouchHandler.OriginY;
+
+            TransformViewPoint(wPDx, wPDy, wScale);
+            
+          }
+          e.stopPropagation();
+        });
+
+        var wTouchDone = function(e) {
+
+          if (true == gGlobal.TouchHandler.InUse) {
+            gGlobal.TouchHandler.InUse = false;
+
+            var wPDx = gGlobal.TouchHandler.PreX - gGlobal.TouchHandler.OriginX;
+            var wPDy = gGlobal.TouchHandler.PreY - gGlobal.TouchHandler.OriginY;
+
+            var wScale = 1.0;
+            if (gGlobal.TouchHandler.OriginalSpread > 1.0) {
+              wScale = Math.sqrt(gGlobal.TouchHandler.PreSpread/gGlobal.TouchHandler.OriginalSpread);
+            }
+
+            ResetTransformViewPoint();
+            TransformDrawCanvas(wPDx, wPDy, wScale);
+            
+            gGlobal.Redraw = true;
+          
+          }
+          
+          e.stopPropagation();
+        }
+        wCanvas.addEventListener("touchend", wTouchDone);
+        wCanvas.addEventListener("touchcancel", wTouchDone);
 
       }
 
