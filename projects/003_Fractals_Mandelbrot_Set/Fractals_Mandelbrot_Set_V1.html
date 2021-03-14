@@ -26,6 +26,7 @@
       DrawCanvas : document.createElement("canvas"),
       ViewPointOffsetX : 0,
       ViewPointOffsetY : 0,
+      ViewPointScale : 1.0,
       DrawState : 0,
 
       MouseHandler : {
@@ -68,8 +69,7 @@
       }
 
       var wMaxIterations = Math.floor( 0.01/iZoom.scale) + 100;
-      if (wMaxIterations > gGlobal.MaxIteration) wMaxIterations = gGlobal.MaxIteration ;
-      //wMaxIterations = gGlobal.MaxIteration;
+      if (wMaxIterations > gGlobal.MaxIteration) wMaxIterations = gGlobal.MaxIteration;
       
       var wCanvasWidth = iCanvas.width;
       var wCanvasHeight = iCanvas.height;
@@ -121,23 +121,48 @@
       wCtx.putImageData(wImageData, 0, 0);
     }
 
-    function TransFormImage(iCanvas, dx,dy, dScale) {
+    function TransFormImage(iCanvas, iDx,iDy, iDScale) {
 
       var wMainCtx = iCanvas.getContext("2d");
       if (null == wMainCtx) {
         return;
       }
 
+      var wDx = iDx + iDScale*(1/iDScale - 1)*iCanvas.width/2; 
+      var wDy = iDy + iDScale*(1/iDScale - 1)*iCanvas.height/2;
+      var wNewWidth = iDScale*iCanvas.width; 
+      var wNewHeight = iDScale*iCanvas.height;
+      
       var wTempCanvas = document.createElement("canvas");
       wTempCanvas.width = iCanvas.width;
       wTempCanvas.height = iCanvas.height;
       var wTempCtx = wTempCanvas.getContext("2d");
 
-      wTempCtx.drawImage(iCanvas, dx,dy);
+      wTempCtx.drawImage(iCanvas, 0,0);
 
       wMainCtx.clearRect(0,0,iCanvas.width, iCanvas.height);
-      wMainCtx.drawImage(wTempCanvas,0,0,dScale*iCanvas.width, dScale*iCanvas.height);
+      wMainCtx.drawImage(wTempCanvas,wDx,wDy,wNewWidth, wNewHeight);
 
+    }
+    
+    function TransformViewPoint(iDx,iDy, iDScale) {    
+      gGlobal.ViewPointOffsetX = iDx;
+      gGlobal.ViewPointOffsetY = iDy;
+      gGlobal.ViewPointScale = iDScale;
+    }
+
+    function ResetTransformViewPoint() {    
+      gGlobal.ViewPointOffsetX = 0;
+      gGlobal.ViewPointOffsetY = 0;
+      gGlobal.ViewPointScale = 1.0;
+    }
+
+    function TransformDrawCanvas(iDx,iDy, iDScale) { 
+      gGlobal.Zoom.scale *= iDScale;   
+      gGlobal.Zoom.offsetX -= gGlobal.Zoom.scale*iDx;
+      gGlobal.Zoom.offsetY -= gGlobal.Zoom.scale*iDy;
+      
+      TransFormImage(gGlobal.DrawCanvas, iDx, iDy, 1/iDScale);
     }
 
     function animate() {
@@ -210,7 +235,9 @@
         var wCtx = wCanvas.getContext("2d");
         var wDx = gGlobal.ViewPointOffsetX - wCanvas.width;
         var wDy = gGlobal.ViewPointOffsetY - wCanvas.height;
-        wCtx.drawImage(gGlobal.DrawCanvas,wDx,wDy,gGlobal.DrawCanvas.width, gGlobal.DrawCanvas.height);
+        var wViewWidth = gGlobal.ViewPointScale*gGlobal.DrawCanvas.width;
+        var wViewHeight = gGlobal.ViewPointScale*gGlobal.DrawCanvas.height;
+        wCtx.drawImage(gGlobal.DrawCanvas,wDx,wDy, wViewWidth, wViewHeight);
       }
 
     }
@@ -239,14 +266,9 @@
         gGlobal.Zoom.scale = 3/wLimitSide;
       
         wCanvas.addEventListener("wheel", function(e) {
-          var wScale = Math.pow(1.001, e.deltaY)
-          gGlobal.Zoom.scale *= wScale;
           gGlobal.Redraw = true;
-          
-          var wDx = Math.round((wScale - 1 )*gGlobal.DrawCanvas.width/2);
-          var wDy = Math.round((wScale - 1 )*gGlobal.DrawCanvas.height/2);
-          TransFormImage(gGlobal.DrawCanvas, wDx,wDy,1/wScale );
-            
+          var wScale = 1/Math.pow(1.001, e.deltaY);          
+          TransformDrawCanvas(0, 0, wScale);
         });
 
         
@@ -255,8 +277,7 @@
           gGlobal.MouseHandler.OriginX = e.x;
           gGlobal.MouseHandler.OriginY = e.y;
 
-          gGlobal.ViewPointOffsetX = 0;
-          gGlobal.ViewPointOffsetY = 0;
+          ResetTransformViewPoint();
 
         });
 
@@ -266,8 +287,8 @@
             
             var wDx = e.x - gGlobal.MouseHandler.OriginX;
             var wDy = e.y - gGlobal.MouseHandler.OriginY;
-            gGlobal.ViewPointOffsetX = wDx;
-            gGlobal.ViewPointOffsetY = wDy;
+
+            TransformViewPoint(wDx, wDy, 1.0);
             
           }
         });
@@ -279,12 +300,10 @@
 
             var wDx = e.x - gGlobal.MouseHandler.OriginX;
             var wDy = e.y - gGlobal.MouseHandler.OriginY;
-            gGlobal.Zoom.offsetX -= gGlobal.Zoom.scale * wDx;
-            gGlobal.Zoom.offsetY -= gGlobal.Zoom.scale * wDy;
 
-            gGlobal.ViewPointOffsetX = 0;
-            gGlobal.ViewPointOffsetY = 0;
-            TransFormImage(gGlobal.DrawCanvas, wDx, wDy, 1);
+            ResetTransformViewPoint();
+            TransformDrawCanvas(wDx, wDy, 1.0);
+            
             gGlobal.Redraw = true;
           }
         }
